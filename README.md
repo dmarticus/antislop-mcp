@@ -30,12 +30,6 @@ vllm serve AlexWortega/Qwen3.8-27B-antislop \
   --max-model-len 32768
 ```
 
-In another terminal, register the MCP server:
-
-```bash
-codex mcp add antislop -- "$PWD/.venv/bin/antislop-mcp"
-```
-
 For a different endpoint:
 
 ```bash
@@ -43,6 +37,77 @@ export ANTISLOP_BASE_URL=http://127.0.0.1:1234/v1
 export ANTISLOP_MODEL=Qwen3.8-27B-antislop
 export ANTISLOP_API_KEY=local
 ```
+
+### Connect an agent
+
+The server uses MCP over stdio, so clients start the `antislop-mcp` executable as a local subprocess. Use an absolute path in client configuration when possible.
+
+#### Codex
+
+```bash
+codex mcp add antislop -- "$PWD/.venv/bin/antislop-mcp"
+codex mcp list
+```
+
+Start a new Codex conversation after registering the server. Ask Codex to use Antislop explicitly, or add the agent guidance below to your project instructions.
+
+#### Claude Code
+
+```bash
+claude mcp add --scope user --transport stdio antislop -- \
+  "$PWD/.venv/bin/antislop-mcp"
+claude mcp list
+```
+
+Claude Code can use both tools directly. The MCP server does not install policy or skills into Claude Code, so add this to your project instructions if you want consistent use:
+
+```text
+Use the antislop_rewrite MCP tool for drafts and prose intended for other people.
+Do not use it for ordinary conversation, code, or progress updates. Preserve
+names, numbers, URLs, and technical terms, and review every returned rewrite.
+```
+
+#### Claude Desktop
+
+Merge this entry into `~/Library/Application Support/Claude/claude_desktop_config.json`, preserving any existing servers, then restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "antislop": {
+      "command": "/absolute/path/to/antislop-mcp/.venv/bin/antislop-mcp"
+    }
+  }
+}
+```
+
+Claude Desktop will see `antislop_status` and `antislop_rewrite` as tools. The menu-bar app can open automatically when the first tool call arrives.
+
+#### OpenCode
+
+```bash
+opencode mcp add antislop --global -- \
+  "$PWD/.venv/bin/antislop-mcp"
+opencode mcp list
+```
+
+Or add it to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "antislop": {
+        "type": "local",
+        "command": ["/absolute/path/to/antislop-mcp/.venv/bin/antislop-mcp"]
+      }
+    }
+  }
+}
+```
+
+Other MCP clients can use the same stdio command: `/absolute/path/to/antislop-mcp/.venv/bin/antislop-mcp`.
 
 `antislop_rewrite` supports `polish`, `humanize`, and `continue` modes. It returns the original text on endpoint failure, and rejects output that drops terms listed in `preserve`. These checks cannot prove factual or semantic fidelity; review the result before publishing.
 
@@ -69,11 +134,7 @@ python scripts/install.py --app build/Antislop.app --python "$PWD/.venv/bin/pyth
 open "$HOME/Applications/Antislop.app"
 ```
 
-Then register the socket-backed MCP server as usual:
-
-```bash
-codex mcp add antislop -- "$PWD/.venv/bin/antislop-mcp"
-```
+After the app is installed, connect your agent using the client instructions above. The MCP server remains the agent-facing process; the app only supplies the local model runtime.
 
 The MCP adapter opens `Antislop.app` if the socket is not available. Model output and service diagnostics are written to `~/Library/Application Support/Antislop/runner.log` and `controller.log`; drafts are not logged by the controller.
 
@@ -119,6 +180,14 @@ the service.
 | Ready and enabled | Disabled and unloaded |
 | --- | --- |
 | ![Antislop menu-bar app ready](docs/images/antislop-ready.png) | ![Antislop menu-bar app off](docs/images/antislop-off.png) |
+
+### Troubleshooting
+
+- If a client reports that the server is unavailable, check that the configured executable exists and is executable: `ls -l .venv/bin/antislop-mcp`.
+- If the app menu stays on `Loading model`, inspect `~/Library/Application Support/Antislop/runner.log` and wait for the local runner to finish loading its weights.
+- If the app is disabled, enable it from the menu bar before retrying. Disabling the app stops the model runner and releases its memory.
+- If you change the runner command, rerun `scripts/install.py` or edit `~/Library/Application Support/Antislop/config.json`, then restart `Antislop.app`.
+- The service is local-only by default. The agent client still receives the draft and tool result, so client-side cloud and retention settings remain applicable.
 
 ## Development
 
