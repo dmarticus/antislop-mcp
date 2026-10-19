@@ -1,6 +1,6 @@
 # Antislop MCP
 
-An MCP server for [Qwen3.8-27B-antislop](https://huggingface.co/AlexWortega/Qwen3.8-27B-antislop). It exposes a small, intentional interface:
+An MCP server for [Qwen3.8-27B-antislop](https://huggingface.co/AlexWortega/Qwen3.8-27B-antislop). It exposes two tools:
 
 - `antislop_status` checks the local model endpoint.
 - `antislop_rewrite` rewrites or continues prose while preserving requested terms.
@@ -58,7 +58,7 @@ Then register the socket-backed MCP server as usual:
 codex mcp add antislop -- "$PWD/.venv/bin/antislop-mcp"
 ```
 
-The MCP adapter automatically opens `Antislop.app` if the socket is not available. Model output and service diagnostics are written to `~/Library/Application Support/Antislop/runner.log` and `controller.log`; drafts are not logged by the controller.
+The MCP adapter opens `Antislop.app` if the socket is not available. Model output and service diagnostics are written to `~/Library/Application Support/Antislop/runner.log` and `controller.log`; drafts are not logged by the controller.
 
 The runner command is configurable in `~/Library/Application Support/Antislop/config.json`, so you can replace `llama-server` with an MLX or LM Studio-compatible server later.
 
@@ -94,7 +94,7 @@ existing voice and do not repeat the last sentence:
 
 The app does not rewrite every Codex response automatically. It is an on-demand
 MCP tool for drafts and other text you intend to share. The menu-bar controls
-let you keep the model loaded, turn it off to release memory, open logs, or quit
+let you keep the model loaded, unload it to release memory, open logs, or quit
 the service.
 
 ### Menu-bar controls
