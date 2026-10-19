@@ -1,5 +1,7 @@
 # Antislop MCP
 
+Antislop MCP gives coding agents a local editor that makes audience-facing prose more specific and less like generic AI output.
+
 An MCP server for [Qwen3.8-27B-antislop](https://huggingface.co/AlexWortega/Qwen3.8-27B-antislop). It exposes two tools:
 
 - `antislop_status` checks the local model endpoint.
