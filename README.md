@@ -99,13 +99,9 @@ the service.
 
 ### Menu-bar controls
 
-When the model is loaded, the menu shows `Ready` and `Enabled`:
-
-![Antislop menu-bar app ready](docs/images/antislop-ready.png)
-
-When `Enabled` is unchecked, the runner is stopped and its model memory is released:
-
-![Antislop menu-bar app off](docs/images/antislop-off.png)
+| Ready and enabled | Disabled and unloaded |
+| --- | --- |
+| ![Antislop menu-bar app ready](docs/images/antislop-ready.png) | ![Antislop menu-bar app off](docs/images/antislop-off.png) |
 
 ## Development
 
