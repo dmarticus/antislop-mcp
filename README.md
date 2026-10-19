@@ -35,9 +35,9 @@ export ANTISLOP_API_KEY=local
 
 `antislop_rewrite` supports `polish`, `humanize`, and `continue` modes. It returns the original text on endpoint failure, and rejects output that drops terms listed in `preserve`. These checks cannot prove factual or semantic fidelity; review the result before publishing.
 
-## Humanizer-style macOS app
+## macOS menu-bar app
 
-The repository can build a small menu-bar app that owns the runner and exposes a private Unix socket to MCP clients. This is the same shape as Humanizer’s resident service: one worker is shared by Codex and other clients, and the model can be unloaded from the menu bar.
+The repository can build a small menu-bar app that owns the runner and exposes a private Unix socket to MCP clients. One worker is shared by Codex and other clients, and the model can be unloaded from the menu bar.
 
 This requires macOS, Apple Silicon, Xcode Command Line Tools, a local Python environment, and a compatible OpenAI-style runner such as `llama-server`:
 
