@@ -62,6 +62,51 @@ The MCP adapter automatically opens `Antislop.app` if the socket is not availabl
 
 The runner command is configurable in `~/Library/Application Support/Antislop/config.json`, so you can replace `llama-server` with an MLX or LM Studio-compatible server later.
 
+### Using Antislop from Codex
+
+Once the menu-bar app says `Ready`, ask Codex to use the MCP tool explicitly:
+
+```text
+Run Antislop on your proposed launch announcement. Preserve the product name,
+the date, and every number. Return only the revised announcement.
+```
+
+Other useful requests:
+
+```text
+Rewrite this email with Antislop. Keep the tone warm but direct, and preserve
+all names, dates, URLs, and commitments:
+
+<paste draft here>
+```
+
+```text
+Use Antislop in `polish` mode on this product description. Keep the structure,
+technical terms, and Markdown formatting, but remove generic AI phrasing.
+```
+
+```text
+Use Antislop in `continue` mode to finish this paragraph naturally. Match the
+existing voice and do not repeat the last sentence:
+
+<paste unfinished paragraph here>
+```
+
+The app does not rewrite every Codex response automatically. It is an on-demand
+MCP tool for drafts and other text you intend to share. The menu-bar controls
+let you keep the model loaded, turn it off to release memory, open logs, or quit
+the service.
+
+### Menu-bar controls
+
+When the model is loaded, the menu shows `Ready` and `Enabled`:
+
+![Antislop menu-bar app ready](docs/images/antislop-ready.png)
+
+When `Enabled` is unchecked, the runner is stopped and its model memory is released:
+
+![Antislop menu-bar app off](docs/images/antislop-off.png)
+
 ## Development
 
 ```bash
