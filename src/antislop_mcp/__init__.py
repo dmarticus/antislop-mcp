@@ -1,0 +1,2 @@
+"""Local Antislop MCP server."""
+
