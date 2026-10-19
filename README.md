@@ -12,7 +12,7 @@ This project has two separate pieces:
 | MCP server | The agent-facing stdio process that exposes Antislop tools. |
 | macOS app | The local runtime that loads the model, owns the runner, and provides menu-bar controls. |
 
-The agent talks to the MCP server. The MCP server talks to the macOS app when you use the bundled local runtime.
+The agent talks to the MCP server, and the MCP server talks to the macOS app when you use the bundled local runtime.
 
 ## MCP server for agents
 
