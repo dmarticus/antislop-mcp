@@ -5,6 +5,17 @@ Antislop MCP gives coding agents a local editor that makes audience-facing prose
 - `antislop_status` checks the local model endpoint.
 - `antislop_rewrite` rewrites or continues prose while preserving requested terms.
 
+This project has two separate pieces:
+
+| Piece | Role |
+| --- | --- |
+| MCP server | The agent-facing stdio process that exposes Antislop tools. |
+| macOS app | The local runtime that loads the model, owns the runner, and provides menu-bar controls. |
+
+The agent talks to the MCP server. The MCP server talks to the macOS app when you use the bundled local runtime.
+
+## MCP server for agents
+
 The MCP adapter does not load model weights. Run Antislop behind any OpenAI-compatible local server. The model card documents vLLM:
 
 ```bash
@@ -35,9 +46,15 @@ export ANTISLOP_API_KEY=local
 
 `antislop_rewrite` supports `polish`, `humanize`, and `continue` modes. It returns the original text on endpoint failure, and rejects output that drops terms listed in `preserve`. These checks cannot prove factual or semantic fidelity; review the result before publishing.
 
+### Guidance for agents
+
+Use `antislop_rewrite` for text intended for other people: documents, messages, product copy, release notes, website copy, and other audience-facing prose. Preserve names, numbers, URLs, technical terms, and formatting with the `preserve` field when they must remain exact.
+
+Do not use it for ordinary assistant replies, code, factual verification, or progress updates. The tool is on demand; it does not automatically rewrite every response. Review every returned rewrite for meaning, tone, and factual accuracy.
+
 ## macOS menu-bar app
 
-The repository can build a small menu-bar app that owns the runner and exposes a private Unix socket to MCP clients. One worker is shared by Codex and other clients, and the model can be unloaded from the menu bar.
+The bundled macOS app is the local model runtime, not another agent-facing interface. It owns the runner, exposes a private Unix socket to the MCP server, and provides menu-bar controls for loading or unloading the model. You can also run the MCP server against another OpenAI-compatible endpoint without using the app.
 
 This requires macOS, Apple Silicon, Xcode Command Line Tools, a local Python environment, and a compatible OpenAI-style runner such as `llama-server`:
 
