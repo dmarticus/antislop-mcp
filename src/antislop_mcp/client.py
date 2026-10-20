@@ -17,7 +17,8 @@ class AntislopClient:
         self.base_url = os.getenv("ANTISLOP_BASE_URL", "http://127.0.0.1:8000/v1").rstrip("/")
         self.model = os.getenv("ANTISLOP_MODEL", "antislop")
         self.api_key = os.getenv("ANTISLOP_API_KEY", "local")
-        self.timeout = float(os.getenv("ANTISLOP_TIMEOUT", "90"))
+        # Dense local models can need several minutes to rewrite a long document.
+        self.timeout = float(os.getenv("ANTISLOP_TIMEOUT", "240"))
 
     async def status(self) -> dict[str, Any]:
         try:
@@ -74,8 +75,15 @@ class AntislopClient:
             if not isinstance(content, str) or not content.strip():
                 raise AntislopError("The model returned no text.")
             return strip_thinking(content).strip()
+        except httpx.TimeoutException as exc:
+            raise AntislopError(
+                f"Antislop timed out after {self.timeout:g} seconds. "
+                "Retry with less text or a lower max_tokens value; split long documents at "
+                "heading or paragraph boundaries."
+            ) from exc
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
-            raise AntislopError(f"Antislop request failed: {exc}") from exc
+            detail = str(exc).strip() or type(exc).__name__
+            raise AntislopError(f"Antislop request failed: {detail}") from exc
 
 
 def strip_thinking(text: str) -> str:

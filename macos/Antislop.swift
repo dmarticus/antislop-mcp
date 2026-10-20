@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var toggle = NSMenuItem()
     var controller: Process?
     var enabled = true
+    var terminating = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -120,10 +121,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openLogs() { NSWorkspace.shared.open(root) }
-    @objc func quit() {
+    @objc func quit() { NSApp.terminate(nil) }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !terminating else { return .terminateLater }
+        terminating = true
         send(["action": "enable", "enabled": false]) { _ in
-            DispatchQueue.main.async { NSApp.terminate(nil) }
+            DispatchQueue.main.async {
+                if self.controller?.isRunning == true { self.controller?.terminate() }
+                sender.reply(toApplicationShouldTerminate: true)
+            }
         }
+        return .terminateLater
     }
 }
 

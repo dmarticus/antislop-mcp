@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -9,6 +10,9 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
 from .service import ensure_app, request
+
+MAX_REWRITE_WORDS = int(os.getenv("ANTISLOP_MAX_WORDS", "1200"))
+SERVICE_TIMEOUT = float(os.getenv("ANTISLOP_MCP_TIMEOUT", "300"))
 
 
 class RewriteRequest(BaseModel):
@@ -25,7 +29,8 @@ mcp = FastMCP(
     instructions=(
         "Use antislop_rewrite for text intended for other people: drafts, posts, documents, product copy, "
         "and messages. Preserve meaning and review every rewrite. Do not use it for ordinary assistant replies, "
-        "code, or factual verification. The tool runs against a local OpenAI-compatible Antislop endpoint."
+        "code, or factual verification. Keep rewrite calls under 1,200 words; split longer documents at heading "
+        "or paragraph boundaries. The tool runs against a local OpenAI-compatible Antislop endpoint."
     ),
 )
 
@@ -42,7 +47,22 @@ async def antislop_rewrite(request: RewriteRequest) -> dict[str, Any]:
 
     Use mode=polish for a light edit, humanize for a stronger rewrite, and continue when text ends mid-thought.
     Include exact words, names, numbers, URLs, or product terms that must remain unchanged in preserve.
+    Keep rewrite calls under 1,200 words. Split longer documents at heading or paragraph boundaries and call
+    the tool once per section. This avoids local inference and MCP client timeouts.
     """
+    words = count_words(request.text)
+    if request.mode != "continue" and words > MAX_REWRITE_WORDS:
+        return {
+            "status": "needs_chunking",
+            "text": request.text,
+            "word_count": words,
+            "max_words_per_call": MAX_REWRITE_WORDS,
+            "message": (
+                f"This draft is {words} words; the one-shot limit is {MAX_REWRITE_WORDS}. "
+                "Split it at heading or paragraph boundaries and call antislop_rewrite once per section. "
+                "Reassemble the accepted sections without changing their separators."
+            ),
+        }
     instruction = {
         "polish": "Lightly polish this draft. Keep its structure and voice; change only what improves naturalness.",
         "humanize": "Rewrite this draft in a natural, specific human voice. Keep the author's intent and facts.",
@@ -66,9 +86,18 @@ async def antislop_rewrite(request: RewriteRequest) -> dict[str, Any]:
                     "temperature": request.temperature,
                 },
             },
-            timeout=120,
+            timeout=SERVICE_TIMEOUT,
         )
-    except (OSError, ValueError, TimeoutError) as exc:
+    except TimeoutError:
+        return {
+            "status": "timeout",
+            "text": request.text,
+            "message": (
+                f"Antislop.app did not respond within {SERVICE_TIMEOUT:g} seconds. "
+                "Split the draft at heading or paragraph boundaries before retrying."
+            ),
+        }
+    except (OSError, ValueError) as exc:
         return {"status": "unavailable", "text": request.text, "message": str(exc)}
     if result.get("status") != "ok":
         return {"status": "unavailable", "text": request.text, "message": result.get("message")}
@@ -81,7 +110,18 @@ async def antislop_rewrite(request: RewriteRequest) -> dict[str, Any]:
             "text": request.text,
             "message": "The rewrite dropped protected terms: " + ", ".join(missing),
         }
-    return {"status": "ok", "text": output, "mode": request.mode, "model": result.get("model")}
+    return {
+        "status": "ok",
+        "text": output,
+        "mode": request.mode,
+        "model": result.get("model"),
+        "word_count": words,
+    }
+
+
+def count_words(text: str) -> int:
+    """Return a predictable whitespace-based size estimate for request routing."""
+    return len(text.split())
 
 
 async def request_service(body: dict[str, Any], timeout: float) -> dict[str, Any]:

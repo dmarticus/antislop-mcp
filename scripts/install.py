@@ -11,6 +11,7 @@ from pathlib import Path
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", type=Path, default=Path("build/Antislop.app"))
+    parser.add_argument("--request-timeout", type=float, default=240)
     # The runner commonly has flags such as `-hf`; consume everything after
     # --runner instead of letting argparse interpret those flags as ours.
     parser.add_argument(
@@ -19,6 +20,8 @@ def main() -> None:
     )
     parser.add_argument("--python", type=Path, default=Path(".venv/bin/python"))
     args = parser.parse_args()
+    if args.request_timeout <= 0:
+        parser.error("--request-timeout must be greater than zero")
     data = Path.home() / "Library/Application Support/Antislop"
     applications = Path.home() / "Applications"
     applications.mkdir(parents=True, exist_ok=True)
@@ -32,6 +35,7 @@ def main() -> None:
         # bare interpreter, which loses the venv's installed dependencies.
         "python": str(args.python.absolute()),
         "runner_command": args.runner,
+        "request_timeout": args.request_timeout,
         "runner_environment": {
             "ANTISLOP_BASE_URL": "http://127.0.0.1:8000/v1",
             "ANTISLOP_MODEL": "antislop",

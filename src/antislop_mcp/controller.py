@@ -29,6 +29,9 @@ class Controller:
         runner_environment = self.config.get("runner_environment", {})
         if isinstance(runner_environment, dict):
             os.environ.update({str(key): str(value) for key, value in runner_environment.items()})
+        os.environ.setdefault(
+            "ANTISLOP_TIMEOUT", str(self.config.get("request_timeout", 240))
+        )
         self.client = AntislopClient()
 
     @staticmethod
@@ -48,6 +51,7 @@ class Controller:
             "controller_pid": os.getpid(),
             "model": self.client.model,
             "endpoint": self.client.base_url,
+            "request_timeout": self.client.timeout,
         }
 
     async def _wait_ready(self) -> None:
@@ -160,9 +164,9 @@ class Controller:
 
 async def run(args: argparse.Namespace) -> None:
     controller = Controller(Path(args.data_dir).expanduser(), args.parent_pid)
-    if controller.parent_pid:
-        asyncio.create_task(_watch_parent(controller.parent_pid))
     stop = asyncio.Event()
+    if controller.parent_pid:
+        asyncio.create_task(_watch_parent(controller.parent_pid, stop))
     for sig in (signal.SIGTERM, signal.SIGINT):
         asyncio.get_running_loop().add_signal_handler(sig, stop.set)
     server_task = asyncio.create_task(controller.serve())
@@ -172,10 +176,10 @@ async def run(args: argparse.Namespace) -> None:
     await controller.stop_runner()
 
 
-async def _watch_parent(parent_pid: int) -> None:
+async def _watch_parent(parent_pid: int, stop: asyncio.Event) -> None:
     while os.getppid() == parent_pid:
         await asyncio.sleep(2)
-    os._exit(0)
+    stop.set()
 
 
 def main() -> None:

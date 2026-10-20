@@ -117,6 +117,20 @@ Use `antislop_rewrite` for text intended for other people: documents, messages, 
 
 Do not use it for ordinary assistant replies, code, factual verification, or progress updates. The tool is on demand; it does not automatically rewrite every response. Review every returned rewrite for meaning, tone, and factual accuracy.
 
+### Long inputs and timeouts
+
+Local generation is much slower than hosted inference. On a large rewrite, the model may spend several minutes producing a response even though it is healthy. Antislop uses these defaults:
+
+| Setting | Default | Purpose |
+| --- | ---: | --- |
+| Model request timeout | 240 seconds | Time allowed for `llama-server` to finish one generation. |
+| MCP socket timeout | 300 seconds | Time allowed for the MCP adapter to receive the app response. |
+| One-shot rewrite limit | 1,200 words | Largest `polish` or `humanize` request accepted without chunking. |
+
+Requests over 1,200 words return `needs_chunking` immediately with the original text and instructions for splitting it. Agents should split long documents at heading or paragraph boundaries, rewrite each section separately, and reassemble the accepted sections without changing their separators. `continue` mode is exempt because its input is context rather than text that must all be reproduced.
+
+The limits can be adjusted with `ANTISLOP_TIMEOUT`, `ANTISLOP_MCP_TIMEOUT`, and `ANTISLOP_MAX_WORDS`. MCP clients may also impose their own tool-call timeout, so smaller sections remain more reliable than one very long generation.
+
 ## macOS menu-bar app
 
 The bundled macOS app is the local model runtime, not another agent-facing interface. It owns the runner, exposes a private Unix socket to the MCP server, and provides menu-bar controls for loading or unloading the model. You can also run the MCP server against another OpenAI-compatible endpoint without using the app.
@@ -127,7 +141,8 @@ This requires macOS, Apple Silicon, Xcode Command Line Tools, a local Python env
 uv venv
 uv pip install -e .
 python scripts/build_app.py --output build/Antislop.app --python "$PWD/.venv/bin/python"
-python scripts/install.py --app build/Antislop.app --python "$PWD/.venv/bin/python" --runner \
+python scripts/install.py --app build/Antislop.app --python "$PWD/.venv/bin/python" \
+  --request-timeout 240 --runner \
   llama-server -hf rawmodels/Qwen3.8-27B-antislop-GGUF:Q4_K_M \
   --alias antislop --host 127.0.0.1 --port 8000 --jinja \
   --reasoning-budget 0 --no-reasoning-preserve
@@ -185,6 +200,7 @@ the service.
 
 - If a client reports that the server is unavailable, check that the configured executable exists and is executable: `ls -l .venv/bin/antislop-mcp`.
 - If the app menu stays on `Loading model`, inspect `~/Library/Application Support/Antislop/runner.log` and wait for the local runner to finish loading its weights.
+- If a rewrite times out, split it into smaller sections before increasing the timeout. For consistently slow hardware, reinstall with a larger `--request-timeout` and set `ANTISLOP_MCP_TIMEOUT` to a slightly higher value in the MCP client environment.
 - If the app is disabled, enable it from the menu bar before retrying. Disabling the app stops the model runner and releases its memory.
 - If you change the runner command, rerun `scripts/install.py` or edit `~/Library/Application Support/Antislop/config.json`, then restart `Antislop.app`.
 - The service is local-only by default. The agent client still receives the draft and tool result, so client-side cloud and retention settings remain applicable.
